@@ -1,0 +1,182 @@
+[{
+  "id": "a93710b.df4f7f",
+  "type": "tab",
+  "label": "Router Interfaces",
+  "disabled": false,
+  "info": ""
+}, {
+  "id": "99e51950.77dec8",
+  "type": "function",
+  "z": "a93710b.df4f7f",
+  "name": "which interface?",
+  "func": "let op = msg.payload === 1 ? 'enable' : 'disable'\n\n\nlet port\nswitch(msg.topic){\n    case 'electrical.switches.bank.101.16.state':\n        port = 'eth0'\n        break;\n    case 'electrical.switches.bank.101.17.state':\n        port = 'eth1'\n        break;\n    case 'electrical.switches.bank.101.18.state':\n        port = 'eth2'\n        break;\n    default:\n        port = ''\n}\n\nif(port){\n    msg.payload = `${op} ${port}`\n} else {\n    msg = null\n}\n\nreturn msg",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 140,
+  "y": 260,
+  "wires": [
+    ["fbc63c4f.4863e"]
+  ]
+}, {
+  "id": "fbc63c4f.4863e",
+  "type": "bigssh",
+  "z": "a93710b.df4f7f",
+  "name": "",
+  "commandLine": "/config/scripts/interface.sh",
+  "commandArgs": "",
+  "minError": 1,
+  "minWarning": 1,
+  "noStdin": false,
+  "format": "ascii",
+  "payloadIsArg": true,
+  "myssh": "d8aae3b2.05a76",
+  "x": 360,
+  "y": 260,
+  "wires": [
+    ["f5be7b57.e764f8"],
+    [],
+    []
+  ]
+}, {
+  "id": "f5be7b57.e764f8",
+  "type": "debug",
+  "z": "a93710b.df4f7f",
+  "name": "",
+  "active": true,
+  "tosidebar": true,
+  "console": false,
+  "tostatus": false,
+  "complete": "true",
+  "targetType": "full",
+  "x": 550,
+  "y": 200,
+  "wires": []
+}, {
+  "id": "1fd770a9.34159f",
+  "type": "signalk-subscribe",
+  "z": "a93710b.df4f7f",
+  "name": "electrical.switches.bank.101.*",
+  "mode": "sendChangesIgnore",
+  "flatten": true,
+  "context": "vessels.self",
+  "path": "electrical.switches.bank.101.*",
+  "source": "",
+  "period": 1000,
+  "x": 140,
+  "y": 200,
+  "wires": [
+    ["99e51950.77dec8"]
+  ]
+}, {
+  "id": "eb983319.5b24a",
+  "type": "inject",
+  "z": "a93710b.df4f7f",
+  "name": "",
+  "topic": "every 30s",
+  "payload": "",
+  "payloadType": "date",
+  "repeat": "30",
+  "crontab": "",
+  "once": false,
+  "onceDelay": 0.1,
+  "x": 140,
+  "y": 380,
+  "wires": [
+    ["24ffe783.baedf8"]
+  ]
+}, {
+  "id": "df177302.0a323",
+  "type": "function",
+  "z": "a93710b.df4f7f",
+  "name": "process switch state",
+  "func": "for(var i = 0; i < msg.payload.length; i++){\n    let switchPort = msg.payload[i]\n    let adminState = switchPort.value === 1 ? 1 : 0\n\n    let data = {\n        switchPort: `eth${i}`,\n        payload: adminState\n    }\n    //node.warn(data)\n    \n    node.send(data)\n}\n\n\n    \n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 220,
+  "y": 500,
+  "wires": [
+    ["17aff9b6.5c2296"]
+  ]
+}, {
+  "id": "24ffe783.baedf8",
+  "type": "snmp",
+  "z": "a93710b.df4f7f",
+  "host": "192.168.1.1",
+  "community": "public",
+  "version": "2c",
+  "oids": "1.3.6.1.2.1.2.2.1.7.4,1.3.6.1.2.1.2.2.1.7.5,1.3.6.1.2.1.2.2.1.7.6",
+  "timeout": 5,
+  "name": "Interface Admin Status",
+  "x": 180,
+  "y": 440,
+  "wires": [
+    ["df177302.0a323"]
+  ]
+}, {
+  "id": "17aff9b6.5c2296",
+  "type": "switch",
+  "z": "a93710b.df4f7f",
+  "name": "switchPort",
+  "property": "switchPort",
+  "propertyType": "msg",
+  "rules": [{
+    "t": "eq",
+    "v": "eth0",
+    "vt": "str"
+  }, {
+    "t": "eq",
+    "v": "eth1",
+    "vt": "str"
+  }, {
+    "t": "eq",
+    "v": "eth2",
+    "vt": "str"
+  }],
+  "checkall": "false",
+  "repair": false,
+  "outputs": 3,
+  "x": 430,
+  "y": 500,
+  "wires": [
+    ["6d3bfcb8.dea784"],
+    ["f76b3450.0e8db8"],
+    ["47a051bc.9a083"]
+  ]
+}, {
+  "id": "6d3bfcb8.dea784",
+  "type": "signalk-send-put",
+  "z": "a93710b.df4f7f",
+  "name": "WAN-Dock",
+  "path": "electrical.switches.bank.101.16.state",
+  "source": "",
+  "x": 710,
+  "y": 440,
+  "wires": []
+}, {
+  "id": "f76b3450.0e8db8",
+  "type": "signalk-send-put",
+  "z": "a93710b.df4f7f",
+  "name": "WAN-Cellular",
+  "path": "electrical.switches.bank.101.17.state",
+  "source": "",
+  "x": 720,
+  "y": 500,
+  "wires": []
+}, {
+  "id": "47a051bc.9a083",
+  "type": "signalk-send-put",
+  "z": "a93710b.df4f7f",
+  "name": "WAN3",
+  "path": "electrical.switches.bank.101.18.state",
+  "source": "",
+  "x": 690,
+  "y": 560,
+  "wires": []
+}, {
+  "id": "d8aae3b2.05a76",
+  "type": "SSH_Credentials",
+  "z": "",
+  "host": "192.168.1.1",
+  "port": "22",
+  "userlabel": "admin@192.168.1.1"
+}]
