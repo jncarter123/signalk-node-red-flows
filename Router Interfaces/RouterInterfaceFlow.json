@@ -21,7 +21,7 @@
   "id": "fbc63c4f.4863e",
   "type": "bigssh",
   "z": "a93710b.df4f7f",
-  "name": "",
+  "name": "change interface state",
   "commandLine": "/config/scripts/interface.sh",
   "commandArgs": "",
   "minError": 1,
