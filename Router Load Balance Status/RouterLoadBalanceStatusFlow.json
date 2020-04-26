@@ -1,0 +1,137 @@
+[{
+  "id": "59abe132.15723",
+  "type": "tab",
+  "label": "Router Load Balance Status",
+  "disabled": false,
+  "info": ""
+}, {
+  "id": "55d1defb.191f1",
+  "type": "bigssh",
+  "z": "59abe132.15723",
+  "name": "show load-balance status",
+  "commandLine": "/opt/vyatta/bin/vyatta-op-cmd-wrapper show load-balance status | grep -A 2 'interface'",
+  "commandArgs": "",
+  "minError": 1,
+  "minWarning": 1,
+  "noStdin": true,
+  "format": "ascii",
+  "payloadIsArg": false,
+  "myssh": "d8aae3b2.05a76",
+  "x": 170,
+  "y": 140,
+  "wires": [
+    ["8fd6dd44.4120f"],
+    [],
+    []
+  ]
+}, {
+  "id": "7bef6f52.a218a",
+  "type": "inject",
+  "z": "59abe132.15723",
+  "name": "every 1 minute",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "repeat": "60",
+  "crontab": "",
+  "once": false,
+  "onceDelay": 0.1,
+  "x": 133.5,
+  "y": 64,
+  "wires": [
+    ["55d1defb.191f1"]
+  ]
+}, {
+  "id": "8fd6dd44.4120f",
+  "type": "function",
+  "z": "59abe132.15723",
+  "name": "process output",
+  "func": "let b = Buffer.from(msg.payload)\nlet result = (b.toString()).split('\\n')\n\n//create the json to descrive the load balance state\nlet lbState = []\nlet state = {}\nfor (let i = 0; i < result.length; i++){\n    let parts = result[i].split(':')\n    switch(parts[0].trim()){\n        case \"interface\":\n            state.interface = parts[1].trim()\n            break\n        case \"carrier\":\n            state.carrier = parts[1].trim()\n            break\n        case \"status\":\n            state.status = parts[1].trim()\n            lbState.push(state)\n            break\n        default:\n            state = {}\n    }\n}\n\n//node.warn(lbState);\nreturn {payload: lbState};\n\n\n\n\n",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 400,
+  "y": 140,
+  "wires": [
+    ["a5843e98.b3015"]
+  ]
+}, {
+  "id": "a5843e98.b3015",
+  "type": "function",
+  "z": "59abe132.15723",
+  "name": "Assign switch state",
+  "func": "msg.payload.forEach(switchPort => sendState(switchPort))\n\nreturn null;\n\n\n//If connected and active - on/green == 1\n//If connected and standby - off/black == 0\n//If not connected - no data == 2\nfunction getSwitchState(state){\n    if(state.carrier === \"up\" && state.status === \"active\"){\n        return 1;\n    } \n    \n    if(state.carrier === \"up\" && state.status !== \"active\"){\n        return 0;\n    } \n    \n    return 2;\n}\n\nfunction sendState(interface){\n    let state = getSwitchState(interface)\n    //node.warn(interface.interface + ' ' + state)\n    \n    if(state === 0 || state === 1){\n        msg = {\n            switchPort: interface.interface,\n            payload: state\n        }\n        //node.warn(msg)\n        node.send(msg)\n    }\n    \n}",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 410,
+  "y": 200,
+  "wires": [
+    ["6a52d7b7.53df08"]
+  ]
+}, {
+  "id": "3bd96fe2.ed955",
+  "type": "signalk-send-put",
+  "z": "59abe132.15723",
+  "name": "WAN-Dock",
+  "path": "electrical.switches.bank.101.1.state",
+  "source": "",
+  "x": 650,
+  "y": 260,
+  "wires": []
+}, {
+  "id": "6a52d7b7.53df08",
+  "type": "switch",
+  "z": "59abe132.15723",
+  "name": "switchPort",
+  "property": "switchPort",
+  "propertyType": "msg",
+  "rules": [{
+    "t": "eq",
+    "v": "eth0",
+    "vt": "str"
+  }, {
+    "t": "eq",
+    "v": "eth1",
+    "vt": "str"
+  }, {
+    "t": "eq",
+    "v": "eth2",
+    "vt": "str"
+  }],
+  "checkall": "false",
+  "repair": false,
+  "outputs": 3,
+  "x": 410,
+  "y": 280,
+  "wires": [
+    ["3bd96fe2.ed955"],
+    ["f4204b07.6d5db8"],
+    ["c1da611c.b89c5"]
+  ]
+}, {
+  "id": "f4204b07.6d5db8",
+  "type": "signalk-send-put",
+  "z": "59abe132.15723",
+  "name": "WAN-Cell",
+  "path": "electrical.switches.bank.101.2.state",
+  "source": "",
+  "x": 640,
+  "y": 320,
+  "wires": []
+}, {
+  "id": "c1da611c.b89c5",
+  "type": "signalk-send-put",
+  "z": "59abe132.15723",
+  "name": "WAN3",
+  "path": "electrical.switches.bank.101.3.state",
+  "source": "",
+  "x": 630,
+  "y": 380,
+  "wires": []
+}, {
+  "id": "d8aae3b2.05a76",
+  "type": "SSH_Credentials",
+  "z": "",
+  "host": "192.168.1.1",
+  "port": "22",
+  "userlabel": "admin@192.168.1.1"
+}]
